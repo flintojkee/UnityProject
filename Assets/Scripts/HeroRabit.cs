@@ -17,6 +17,14 @@ public class HeroRabit : MonoBehaviour
 	float JumpTime = 0f;
 	private Transform heroParent = null;
 	private bool dead;
+	private bool freezed;
+
+	public static HeroRabit lastRabit = null;
+	public static bool isRabitScaling = false;
+
+	void Awake() {
+		HeroRabit.lastRabit = this;
+	}
 
 	static void SetNewParent(Transform obj, Transform new_parent)
 	{
@@ -48,6 +56,15 @@ public class HeroRabit : MonoBehaviour
 
 	private void FixedUpdate()
 	{
+		if (this.freezed || this.dead) {
+			Vector2 vel = myBody.velocity;
+			vel.x = 0;
+			myBody.velocity = vel;
+			animator.SetBool("run", false);
+			animator.SetBool("jump", false);
+			return;
+		}
+
 		float value = Input.GetAxis("Horizontal");
 
 		// Set velocity to hero
@@ -92,13 +109,11 @@ public class HeroRabit : MonoBehaviour
 				hit.transform.GetComponent<MovingPlatform>() != null) {
 				SetNewParent(this.transform, hit.transform);
 			}
-			Debug.Log("Hit the ground");
 		}
 		else
 		{
 			isGrounded = false;
 			SetNewParent(this.transform, this.heroParent);
-			Debug.Log("Fly in sky");
 		}
 		//Намалювати лінію (для розробника)
 		Debug.DrawLine(from, to, Color.red);
@@ -128,27 +143,33 @@ public class HeroRabit : MonoBehaviour
 		}
 
 		animator.SetBool("jump", !this.isGrounded);
-		animator.SetBool("death_on_platform", dead);
-		if (dead)
-		{
-			time_to_animation_die -= Time.deltaTime;
-			animator.SetBool("death_on_platform", true);
-			if (time_to_animation_die <= 0)
-			{
-				this.revive();
-				LevelController.current.onRabitDeath(this);
-				time_to_animation_die = 1;
-			}
-
-		}
 	}
 
-	private float time_to_animation_die = 2f;
-	public void kill() {
+	IEnumerator die() {
 		this.dead = true;
+		if (!animator.GetBool("jump")) {
+			animator.SetTrigger("death");
+			yield return new WaitForSeconds(2f);
+		}
+		revive();
+		animator.SetTrigger("idle");
+		LevelController.current.onRabitDeath(HeroRabit.lastRabit);
+	}
+
+	public void freezeRabit() {
+		this.freezed = true;
+	}
+
+	public void kill() {
+		StartCoroutine(die());    
 	}
 
 	public void revive() {
 		this.dead = false;
+		this.freezed = false;
+	}
+
+	public bool isDead() {
+		return dead;
 	}
 }

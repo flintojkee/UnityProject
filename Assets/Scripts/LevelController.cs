@@ -21,6 +21,7 @@ public class LevelController : MonoBehaviour {
 	public void onRabitDeath(HeroRabit rabit)
 	{
 		//При смерті кролика повертаємо на початкову позицію
+		if (this.IsHeroBig()) this.makeSmaller(rabit);
 		rabit.transform.position = this.startingPosition;
 	}
 
